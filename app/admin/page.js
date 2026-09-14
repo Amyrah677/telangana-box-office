@@ -5,14 +5,18 @@ import { createClient } from "@supabase/supabase-js";
 
 export default function AdminPage() {
   const [districts, setDistricts] = useState([]);
+
   const [district, setDistrict] = useState("");
   const [centre, setCentre] = useState("");
   const [theatre, setTheatre] = useState("");
   const [screen, setScreen] = useState("");
   const [seats, setSeats] = useState("");
+
+  const [movie, setMovie] = useState("");
+  const [language, setLanguage] = useState("");
+
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [savingMovie, setSavingMovie] = useState(false);
 
   useEffect(() => {
     const supabase = createClient(
@@ -21,139 +25,61 @@ export default function AdminPage() {
     );
 
     async function loadDistricts() {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("districts")
         .select("id, name")
         .order("name");
 
-      if (error) {
-        setMessage("❌ Districts load avvaledu.");
-      } else {
-        setDistricts(data || []);
-      }
-
-      setLoading(false);
+      setDistricts(data || []);
     }
 
     loadDistricts();
   }, []);
 
-  async function addTheatre() {
+  async function addMovie() {
     setMessage("");
 
-    if (!district || !centre || !theatre || !screen || !seats) {
-      setMessage("❌ Please fill all fields.");
+    if (!movie || !language) {
+      setMessage("❌ Movie name and language are required.");
       return;
     }
 
-    setSaving(true);
+    setSavingMovie(true);
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
     );
 
-    // 1. Find or create Centre
-    let { data: centreData, error: centreFindError } = await supabase
-      .from("centres")
-      .select("id")
-      .eq("district_id", district)
-      .eq("name", centre)
-      .maybeSingle();
-
-    if (centreFindError) {
-      setMessage("❌ Centre check failed.");
-      setSaving(false);
-      return;
-    }
-
-    if (!centreData) {
-      const { data, error } = await supabase
-        .from("centres")
-        .insert({
-          district_id: district,
-          name: centre,
-        })
-        .select("id")
-        .single();
-
-      if (error) {
-        setMessage("❌ Centre add cheyyalekapoyam.");
-        setSaving(false);
-        return;
-      }
-
-      centreData = data;
-    }
-
-    // 2. Find or create Theatre
-    let { data: theatreData, error: theatreFindError } = await supabase
-      .from("theatres")
-      .select("id")
-      .eq("centre_id", centreData.id)
-      .eq("name", theatre)
-      .maybeSingle();
-
-    if (theatreFindError) {
-      setMessage("❌ Theatre check failed.");
-      setSaving(false);
-      return;
-    }
-
-    if (!theatreData) {
-      const { data, error } = await supabase
-        .from("theatres")
-        .insert({
-          centre_id: centreData.id,
-          name: theatre,
-        })
-        .select("id")
-        .single();
-
-      if (error) {
-        setMessage("❌ Theatre add cheyyalekapoyam.");
-        setSaving(false);
-        return;
-      }
-
-      theatreData = data;
-    }
-
-    // 3. Add Screen
-    const { error: screenError } = await supabase
-      .from("screens")
+    const { error } = await supabase
+      .from("movies")
       .insert({
-        theatre_id: theatreData.id,
-        name: screen,
-        total_seats: Number(seats),
+        title: movie,
+        language: language,
       });
 
-    if (screenError) {
-      if (screenError.code === "23505") {
-        setMessage("⚠️ Ee screen already exists.");
+    if (error) {
+      if (error.code === "23505") {
+        setMessage("⚠️ This movie already exists.");
       } else {
-        setMessage("❌ Screen add cheyyalekapoyam.");
+        setMessage("❌ Movie could not be added.");
       }
 
-      setSaving(false);
+      setSavingMovie(false);
       return;
     }
 
-    // 4. Success
-    setMessage("✅ Theatre & Screen successfully added!");
+    setMessage("✅ Movie added successfully!");
 
-    setCentre("");
-    setTheatre("");
-    setScreen("");
-    setSeats("");
-
-    setSaving(false);
+    setMovie("");
+    setLanguage("");
+    setSavingMovie(false);
   }
 
   return (
     <main
       style={{
-        maxWidth: "700px",
+        maxWidth: "800px",
         margin: "40px auto",
         padding: "30px",
         fontFamily: "Arial, sans-serif",
@@ -163,61 +89,100 @@ export default function AdminPage() {
 
       <h2>Admin Panel</h2>
 
-      <p>Add Theatre, Screen and Seat Details</p>
-
       <hr />
 
-      <h3>District</h3>
+      <h2>🎬 Add Movie</h2>
 
-      {loading ? (
-        <p>Loading districts...</p>
-      ) : (
-        <select
-          style={inputStyle}
-          value={district}
-          onChange={(e) => setDistrict(e.target.value)}
-        >
-          <option value="">Select District</option>
-
-          {districts.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name}
-            </option>
-          ))}
-        </select>
-      )}
-
-      <h3>Centre / City</h3>
+      <p>Movie Name</p>
 
       <input
         style={inputStyle}
         type="text"
+        value={movie}
+        onChange={(e) => setMovie(e.target.value)}
+        placeholder="Example: Mandaadi"
+      />
+
+      <p>Language</p>
+
+      <select
+        style={inputStyle}
+        value={language}
+        onChange={(e) => setLanguage(e.target.value)}
+      >
+        <option value="">Select Language</option>
+        <option value="Telugu">Telugu</option>
+        <option value="Hindi">Hindi</option>
+        <option value="Tamil">Tamil</option>
+        <option value="Malayalam">Malayalam</option>
+        <option value="Kannada">Kannada</option>
+        <option value="English">English</option>
+      </select>
+
+      <br />
+
+      <button
+        style={buttonStyle}
+        onClick={addMovie}
+        disabled={savingMovie}
+      >
+        {savingMovie ? "Saving..." : "Add Movie"}
+      </button>
+
+      {message && (
+        <p style={{ marginTop: "20px", fontWeight: "bold" }}>
+          {message}
+        </p>
+      )}
+
+      <hr style={{ marginTop: "40px" }} />
+
+      <h2>🏢 Theatre Details</h2>
+
+      <p>District</p>
+
+      <select
+        style={inputStyle}
+        value={district}
+        onChange={(e) => setDistrict(e.target.value)}
+      >
+        <option value="">Select District</option>
+
+        {districts.map((d) => (
+          <option key={d.id} value={d.id}>
+            {d.name}
+          </option>
+        ))}
+      </select>
+
+      <p>Centre / City</p>
+
+      <input
+        style={inputStyle}
         value={centre}
         onChange={(e) => setCentre(e.target.value)}
         placeholder="Example: Karimnagar"
       />
 
-      <h3>Theatre</h3>
+      <p>Theatre</p>
 
       <input
         style={inputStyle}
-        type="text"
         value={theatre}
         onChange={(e) => setTheatre(e.target.value)}
         placeholder="Example: Asian Paradise"
       />
 
-      <h3>Screen</h3>
+      <p>Screen</p>
 
       <input
         style={inputStyle}
-        type="text"
         value={screen}
         onChange={(e) => setScreen(e.target.value)}
         placeholder="Example: Screen 1"
       />
 
-      <h3>Total Seats</h3>
+      <p>Total Seats</p>
 
       <input
         style={inputStyle}
@@ -226,29 +191,6 @@ export default function AdminPage() {
         onChange={(e) => setSeats(e.target.value)}
         placeholder="Example: 250"
       />
-
-      <br />
-      <br />
-
-      <button
-        style={buttonStyle}
-        onClick={addTheatre}
-        disabled={saving}
-      >
-        {saving ? "Saving..." : "Add Theatre & Screen"}
-      </button>
-
-      {message && (
-        <p
-          style={{
-            marginTop: "20px",
-            fontWeight: "bold",
-            fontSize: "16px",
-          }}
-        >
-          {message}
-        </p>
-      )}
     </main>
   );
 }
