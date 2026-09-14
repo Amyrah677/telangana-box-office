@@ -1,41 +1,108 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+
 export default function AdminPage() {
+  const [districts, setDistricts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    );
+
+    async function loadDistricts() {
+      const { data, error } = await supabase
+        .from("districts")
+        .select("id, name")
+        .order("name");
+
+      if (!error) {
+        setDistricts(data || []);
+      }
+
+      setLoading(false);
+    }
+
+    loadDistricts();
+  }, []);
+
   return (
     <main style={{ padding: "40px", fontFamily: "Arial" }}>
       <h1>Telangana Box Office</h1>
+
       <h2>Admin Panel</h2>
 
-      <p>Admin panel is working.</p>
+      <p>Add Theatre Details</p>
 
       <hr />
 
-      <h3>Add Theatre</h3>
+      <h3>District</h3>
 
-      <p>District</p>
-      <select>
-        <option>Select District</option>
-        <option>Karimnagar</option>
-        <option>Hyderabad</option>
-        <option>Warangal</option>
-      </select>
+      {loading ? (
+        <p>Loading districts...</p>
+      ) : (
+        <select style={inputStyle}>
+          <option value="">Select District</option>
 
-      <p>Centre / City</p>
-      <input placeholder="Example: Karimnagar" />
+          {districts.map((district) => (
+            <option key={district.id} value={district.id}>
+              {district.name}
+            </option>
+          ))}
+        </select>
+      )}
 
-      <p>Theatre</p>
-      <input placeholder="Example: Asian Paradise" />
+      <h3>Centre / City</h3>
 
-      <p>Screen</p>
-      <input placeholder="Example: Screen 1" />
+      <input
+        style={inputStyle}
+        placeholder="Example: Karimnagar"
+      />
 
-      <p>Total Seats</p>
-      <input type="number" placeholder="Example: 250" />
+      <h3>Theatre</h3>
+
+      <input
+        style={inputStyle}
+        placeholder="Example: Asian Paradise"
+      />
+
+      <h3>Screen</h3>
+
+      <input
+        style={inputStyle}
+        placeholder="Example: Screen 1"
+      />
+
+      <h3>Total Seats</h3>
+
+      <input
+        style={inputStyle}
+        type="number"
+        placeholder="Example: 250"
+      />
 
       <br />
       <br />
 
-      <button>Add Theatre & Screen</button>
+      <button style={buttonStyle}>
+        Add Theatre & Screen
+      </button>
     </main>
   );
 }
+
+const inputStyle = {
+  width: "350px",
+  padding: "10px",
+  fontSize: "16px",
+  marginBottom: "10px",
+};
+
+const buttonStyle = {
+  padding: "12px 20px",
+  fontSize: "16px",
+  cursor: "pointer",
+};
