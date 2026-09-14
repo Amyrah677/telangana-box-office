@@ -3,6 +3,43 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
+const ALL_DISTRICTS = [
+  "All",
+  "Adilabad",
+  "Bhadradri Kothagudem",
+  "Hanamkonda",
+  "Hyderabad",
+  "Jagtial",
+  "Jangaon",
+  "Jayashankar Bhupalpally",
+  "Jogulamba Gadwal",
+  "Kamareddy",
+  "Karimnagar",
+  "Khammam",
+  "Komaram Bheem Asifabad",
+  "Mahabubabad",
+  "Mahbubnagar",
+  "Mancherial",
+  "Medak",
+  "Medchal-Malkajgiri",
+  "Mulugu",
+  "Nagarkurnool",
+  "Nalgonda",
+  "Narayanpet",
+  "Nirmal",
+  "Nizamabad",
+  "Peddapalli",
+  "Rajanna Sircilla",
+  "Rangareddy",
+  "Sangareddy",
+  "Siddipet",
+  "Suryapet",
+  "Vikarabad",
+  "Wanaparthy",
+  "Warangal",
+  "Yadadri Bhuvanagiri"
+];
+
 export default function Dashboard() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,12 +56,12 @@ export default function Dashboard() {
       return;
     }
 
-    const sb = createClient(url, key);
+    const supabase = createClient(url, key);
 
-    async function load() {
+    async function loadData() {
       setLoading(true);
 
-      const { data, error } = await sb
+      const { data, error } = await supabase
         .from("snapshot_view")
         .select("*")
         .order("snapshot_at", { ascending: false })
@@ -37,42 +74,35 @@ export default function Dashboard() {
       setLoading(false);
     }
 
-    load();
+    loadData();
   }, []);
-
-  const districts = [
-    "All",
-    ...new Set(rows.map((r) => r.district).filter(Boolean)),
-  ];
 
   const movies = [
     "All",
-    ...new Set(rows.map((r) => r.movie).filter(Boolean)),
+    ...new Set(rows.map((r) => r.movie).filter(Boolean))
   ];
 
   const languages = [
     "All",
-    ...new Set(rows.map((r) => r.language).filter(Boolean)),
+    ...new Set(rows.map((r) => r.language).filter(Boolean))
   ];
 
-  const filtered = useMemo(
-    () =>
-      rows.filter(
-        (r) =>
-          (district === "All" || r.district === district) &&
-          (movie === "All" || r.movie === movie) &&
-          (language === "All" || r.language === language)
-      ),
-    [rows, district, movie, language]
-  );
+  const filtered = useMemo(() => {
+    return rows.filter(
+      (r) =>
+        (district === "All" || r.district === district) &&
+        (movie === "All" || r.movie === movie) &&
+        (language === "All" || r.language === language)
+    );
+  }, [rows, district, movie, language]);
 
   const tickets = filtered.reduce(
-    (a, r) => a + (Number(r.estimated_tickets) || 0),
+    (sum, r) => sum + (Number(r.estimated_tickets) || 0),
     0
   );
 
   const gross = filtered.reduce(
-    (a, r) => a + (Number(r.estimated_gross) || 0),
+    (sum, r) => sum + (Number(r.estimated_gross) || 0),
     0
   );
 
@@ -85,7 +115,6 @@ export default function Dashboard() {
             Live-ready Telangana movie tracking dashboard
           </div>
         </div>
-
         <div className="pill">Collector Ready</div>
       </div>
 
@@ -95,14 +124,17 @@ export default function Dashboard() {
             value={district}
             onChange={(e) => setDistrict(e.target.value)}
           >
-            {districts.map((x) => (
-              <option key={x}>{x}</option>
+            {ALL_DISTRICTS.map((d) => (
+              <option key={d}>{d}</option>
             ))}
           </select>
 
-          <select value={movie} onChange={(e) => setMovie(e.target.value)}>
-            {movies.map((x) => (
-              <option key={x}>{x}</option>
+          <select
+            value={movie}
+            onChange={(e) => setMovie(e.target.value)}
+          >
+            {movies.map((m) => (
+              <option key={m}>{m}</option>
             ))}
           </select>
 
@@ -110,8 +142,8 @@ export default function Dashboard() {
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
           >
-            {languages.map((x) => (
-              <option key={x}>{x}</option>
+            {languages.map((l) => (
+              <option key={l}>{l}</option>
             ))}
           </select>
         </div>
@@ -126,10 +158,7 @@ export default function Dashboard() {
         <div className="card">
           <div className="label">EST. GROSS</div>
           <div className="value">
-            ₹
-            {gross.toLocaleString("en-IN", {
-              maximumFractionDigits: 0,
-            })}
+            ₹{gross.toLocaleString("en-IN")}
           </div>
         </div>
 
@@ -176,22 +205,20 @@ export default function Dashboard() {
                   <td>{r.screen}</td>
                   <td>{r.movie}</td>
                   <td>{r.language}</td>
-                  <td>{new Date(r.show_time).toLocaleString("en-IN")}</td>
-
+                  <td>
+                    {new Date(r.show_time).toLocaleString("en-IN")}
+                  </td>
                   <td>
                     {r.occupancy_percent != null
                       ? Number(r.occupancy_percent).toFixed(1) + "%"
                       : "-"}
                   </td>
-
                   <td>{r.estimated_tickets ?? "-"}</td>
-
                   <td>
                     {r.estimated_gross != null
                       ? "₹" + Number(r.estimated_gross).toFixed(0)
                       : "-"}
                   </td>
-
                   <td>
                     <span className="pill">{r.source}</span>
                   </td>
@@ -204,16 +231,10 @@ export default function Dashboard() {
 
       <div className="panel">
         <h3>Data rule</h3>
-
         <p>
-          Reliable sold counts are shown as tickets sold only when the source
-          provides them. Seat-map observations are labelled as observed
-          occupancy / estimated tickets.
-        </p>
-
-        <p className="footer">
-          Collector endpoint: <code>/api/collector</code> · Scheduled hook:{" "}
-          <code>/api/cron</code>
+          Reliable sold counts are shown as tickets sold only when the
+          source provides them. Seat-map observations are labelled as
+          observed occupancy / estimated tickets.
         </p>
       </div>
     </main>
