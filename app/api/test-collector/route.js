@@ -1,8 +1,14 @@
-import { NextResponse } from "next";
-
 export async function GET() {
-  return NextResponse.json({
-    ok: true,
-    message: "Telangana Box Office collector is working!"
-  });
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      message: "Telangana Box Office collector is working!"
+    }),
+    {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json"
+      }
+    }
+  );
 }
